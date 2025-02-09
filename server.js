@@ -1,8 +1,11 @@
 const mqtt = require("mqtt");
 const express = require("express");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const httpServer = createServer(app);
+const io = new Server(httpServer);
 
 // Public HiveMQ broker details
 const brokerUrl = "mqtt://broker.emqx.io:1883"; // TCP connection URL
@@ -18,7 +21,6 @@ const topic = "812921/gps";
 
 // Connect to the public MQTT broker
 const client = mqtt.connect(brokerUrl, options);
-
 let locationData = []; // Store received location data
 
 client.on("connect", () => {
@@ -77,3 +79,6 @@ app.use(express.static("public"));
 app.get("/api/locations", (req, res) => {
     res.json(locationData);
 });
+
+// Export the HTTP server for Vercel
+module.exports = httpServer;
