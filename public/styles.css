@@ -1,0 +1,35 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+#map {
+    height: 500px;
+    width: 100%;
+}
+
+#locationTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#locationTable th, #locationTable td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+#locationTable th {
+    background-color: #f4f4f4;
+}
+
+/* Style for placeholder values */
+#locationTable td {
+    color: gray; /* Gray color for placeholder values */
+}
+
+#locationTable td:not(:empty) {
+    color: black; /* Black color for actual data */
+}
