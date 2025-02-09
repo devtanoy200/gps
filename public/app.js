@@ -1,138 +1,115 @@
-// Set your Mapbox access token
-mapboxgl.accessToken = 'pk.eyJ1IjoiaWFtdGFub3kiLCJhIjoiY202eDdpMXJtMDN6OTJyczF0ZTFobWExMyJ9.9EgLnSDxRIhgImJXHaAogA'; // Replace with your Mapbox access token
-
-// Initialize the Mapbox map
+// Initialize Mapbox
 const map = new mapboxgl.Map({
-    container: 'map', // The ID of the <div> element where the map will be displayed
-    style: 'mapbox://styles/mapbox/streets-v12', // Map style
-    center: [90.18522333333335, 24.09163333333334], // Default center
-    zoom: 10, // Default zoom level
+  container: "map", // HTML element ID
+  style: "mapbox://styles/mapbox/streets-v12", // Mapbox style
+  center: [0, 0], // Default center
+  zoom: 2, // Default zoom level
 });
 
-// Add navigation controls (zoom in/out buttons)
-map.addControl(new mapboxgl.NavigationControl());
+// Add Mapbox token
+mapboxgl.accessToken = "pk.eyJ1IjoiaWFtdGFub3kiLCJhIjoiY202eDdpMXJtMDN6OTJyczF0ZTFobWExMyJ9.9EgLnSDxRIhgImJXHaAogA"; // Replace with your Mapbox token
 
-// Variable to store the user's chosen zoom level
-let userZoomLevel = map.getZoom();
+let deviceMarker = null; // To store the device marker
+let userMarker = null; // To store the user's marker
+let routeLayerId = null; // To store the route layer ID
 
-// Load zoom level from localStorage on page load
-const savedZoomLevel = localStorage.getItem('userZoomLevel');
-if (savedZoomLevel) {
-    map.setZoom(parseFloat(savedZoomLevel));
-    userZoomLevel = parseFloat(savedZoomLevel);
+// Function to add or update the device marker
+function updateDeviceMarker(latitude, longitude) {
+  if (deviceMarker) {
+    deviceMarker.remove(); // Remove the previous marker
+  }
+  deviceMarker = new mapboxgl.Marker({ color: "red" })
+    .setLngLat([longitude, latitude])
+    .addTo(map);
+
+  // Draw or update the route between the user and the device
+  drawRoute(userMarker.getLngLat(), [longitude, latitude]);
 }
 
-// Listen for user zoom events
-map.on('zoomend', () => {
-    userZoomLevel = map.getZoom();
-    localStorage.setItem('userZoomLevel', userZoomLevel);
-});
+// Function to draw a route between two points
+function drawRoute(start, end) {
+  if (!start || !end) return;
 
-// Function to create a custom marker with a human icon
-function createHumanMarker() {
-    console.log("Creating human marker...");
-    const el = document.createElement('div');
-    el.className = 'custom-marker';
-    el.style.backgroundImage = "url('/human-icon.png')"; // Ensure this path is correct
-    el.style.width = '40px';
-    el.style.height = '40px';
-    el.style.backgroundSize = 'cover';
-    return el;
+  // Remove the previous route layer if it exists
+  if (routeLayerId && map.getLayer(routeLayerId)) {
+    map.removeLayer(routeLayerId);
+    map.removeSource("route");
+  }
+
+  // Add a new route layer
+  map.addSource("route", {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "LineString",
+        coordinates: [start, end],
+      },
+    },
+  });
+
+  routeLayerId = "route-layer";
+  map.addLayer({
+    id: routeLayerId,
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round",
+    },
+    paint: {
+      "line-color": "#3887be",
+      "line-width": 5,
+    },
+  });
 }
 
-// Function to add and track the user's real-time location
-function trackUserLocation() {
-    if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
-        return;
-    }
+// Function to add the user's location marker
+function addUserMarker(latitude, longitude) {
+  if (userMarker) {
+    userMarker.remove(); // Remove the previous marker
+  }
+  userMarker = new mapboxgl.Marker({ element: createCustomMarker() })
+    .setLngLat([longitude, latitude])
+    .addTo(map);
 
-    let userMarker;
-
-    navigator.geolocation.watchPosition(
-        (position) => {
-            const { latitude, longitude } = position.coords;
-            console.log("User location:", { latitude, longitude });
-
-            if (!userMarker) {
-                userMarker = new mapboxgl.Marker({
-                    element: createHumanMarker()
-                })
-                    .setLngLat([longitude, latitude])
-                    .setPopup(new mapboxgl.Popup().setHTML(
-                        `<h3>Your Location</h3><p>Lat: ${latitude}, Lon: ${longitude}</p>`
-                    ))
-                    .addTo(map);
-
-                console.log("User marker added to map.");
-
-                // Center the map on the user's location
-                map.flyTo({
-                    center: [longitude, latitude],
-                    zoom: userZoomLevel,
-                    essential: true,
-                });
-            } else {
-                userMarker.setLngLat([longitude, latitude]);
-                console.log("User marker updated.");
-            }
-        },
-        (error) => {
-            console.error("Geolocation error:", error.message);
-            alert(`Geolocation error: ${error.message}`);
-        },
-        {
-            enableHighAccuracy: true,
-            maximumAge: 10000,
-            timeout: 5000,
-        }
-    );
+  // Center the map on the user's location initially
+  map.flyTo({ center: [longitude, latitude], zoom: 10 });
 }
 
-// Call the function to start tracking the user's location
-trackUserLocation();
-
-// Connect to the WebSocket server
-const socket = io('https://peppy-daifuku-4aa536.netlify.app'); // Replace with your backend server URL
-
-// Variable to store the latest MQTT marker
-let mqttMarker;
-
-// Function to update the single row in the table
-function updateTableRow(data) {
-    document.getElementById("deviceId").textContent = data.deviceId || "-";
-    document.getElementById("latitude").textContent = data.latitude || "-";
-    document.getElementById("longitude").textContent = data.longitude || "-";
+// Function to create a custom marker using the human icon
+function createCustomMarker() {
+  const img = document.createElement("img");
+  img.src = "/human-icon.png"; // Path to the human icon
+  img.style.width = "40px";
+  img.style.height = "40px";
+  return img;
 }
+
+// WebSocket connection
+const socket = io();
 
 // Listen for location updates from the server
 socket.on("locationUpdate", (data) => {
-    const { deviceId, latitude, longitude } = data;
+  const { latitude, longitude, deviceId } = data;
 
-    // Update the single row in the table
-    updateTableRow({ deviceId, latitude, longitude });
+  // Update the table with live data
+  document.getElementById("deviceId").textContent = deviceId;
+  document.getElementById("latitude").textContent = latitude.toFixed(6);
+  document.getElementById("longitude").textContent = longitude.toFixed(6);
 
-    // Remove the previous MQTT marker if it exists
-    if (mqttMarker) {
-        mqttMarker.remove(); // Remove the old marker from the map
-    }
-
-    // Add a new marker for the latest location
-    mqttMarker = new mapboxgl.Marker()
-        .setLngLat([longitude, latitude]) // Set the marker's position
-        .setPopup(new mapboxgl.Popup().setHTML(
-            `<h3>Device ID: ${deviceId}</h3><p>Lat: ${latitude}, Lon: ${longitude}</p>`
-        )) // Add a popup with details
-        .addTo(map); // Add the marker to the map
-
-    // Pan to the new location on the map (without changing the zoom level)
-    map.panTo([longitude, latitude], {
-        duration: 2000, // Animation duration in milliseconds (2 seconds)
-        easing(t) {
-            return t; // Linear easing for smooth panning
-        }
-    });
-
-    // Ensure the zoom level remains fixed at the user's chosen level
-    map.setZoom(userZoomLevel);
+  // Update the device marker on the map
+  updateDeviceMarker(latitude, longitude);
 });
+
+// Get the user's current location
+navigator.geolocation.getCurrentPosition(
+  (position) => {
+    const { latitude, longitude } = position.coords;
+    addUserMarker(latitude, longitude);
+  },
+  (error) => {
+    console.error("Error getting user location:", error);
+  }
+);
