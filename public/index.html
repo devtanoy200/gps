@@ -3,57 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Location Data Visualization</title>
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    h1 {
-      text-align: center;
-      margin: 20px 0;
-    }
-    #map {
-      width: 100%;
-      height: 600px;
-    }
-  </style>
+  <title>Live Location Visualization</title>
+  <link href="style.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <h1>Real-Time Location Data Visualization</h1>
-  <div id="map"></div>
+  <h1>Live Location Visualization</h1>
+  <div id="map" style="height: 600px;"></div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Socket.IO Client -->
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    // Initialize the map
-    const map = L.map("map").setView([0, 0], 2); // Default view: Center of the world
+  <!-- Table to display live data -->
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Device ID</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td id="deviceId">-</td>
+        <td id="latitude">-</td>
+        <td id="longitude">-</td>
+      </tr>
+    </tbody>
+  </table>
 
-    // Add a tile layer (OpenStreetMap)
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "© OpenStreetMap contributors",
-    }).addTo(map);
-
-    // Connect to the WebSocket server
-    const socket = io();
-
-    // Listen for location updates from the server
-    socket.on("locationUpdate", (data) => {
-      const { latitude, longitude, deviceId } = data;
-
-      // Add a marker for the new location
-      const marker = L.marker([latitude, longitude]).addTo(map);
-      marker.bindPopup(`Device ID: ${deviceId}<br>Lat: ${latitude}, Lon: ${longitude}`).openPopup();
-
-      // Optionally, pan the map to the new location
-      map.setView([latitude, longitude], 5);
-    });
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
